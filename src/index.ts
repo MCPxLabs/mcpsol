@@ -2,12 +2,16 @@
 
 import express from "express";
 import cors from "cors";
+import path from "path";
+import { fileURLToPath } from "url";
 import { ACTIONS, SolanaAgentKit, startMcpServer } from "solana-agent-kit";
 import * as dotenv from "dotenv";
 
 dotenv.config();
 
-// Validate required environment variables
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 function validateEnvironment() {
   const requiredEnvVars = {
     SOLANA_PRIVATE_KEY: process.env.SOLANA_PRIVATE_KEY,
@@ -20,24 +24,22 @@ function validateEnvironment() {
 
   if (missingVars.length > 0) {
     throw new Error(
-      `Missing required environment variables: ${missingVars.join(", ")}`,
+      `Missing required environment variables: ${missingVars.join(", ")}`
     );
   }
 }
 
 async function main() {
   try {
-    // Validate environment before proceeding
     validateEnvironment();
 
-    // Initialize the agent
     const agent = new SolanaAgentKit(
       process.env.SOLANA_PRIVATE_KEY!,
       process.env.RPC_URL!,
       {
         OPENAI_API_KEY: process.env.OPENAI_API_KEY || "",
         PERPLEXITY_API_KEY: process.env.PERPLEXITY_API_KEY || "",
-      },
+      }
     );
 
     const mcp_actions = {
@@ -57,59 +59,37 @@ async function main() {
     const app = express();
     const PORT = process.env.PORT || 8080;
 
-    // --- 🛡️ Configure CORS ---
-    app.use(cors({
-      origin: (origin, callback) => {
-        const allowedOrigins = [
-          "https://mcpfront-production.up.railway.app",
-          "http://localhost:5173"
-        ];
-        if (!origin || allowedOrigins.includes(origin)) {
-          callback(null, true);
-        } else {
-          callback(new Error("Not allowed by CORS"));
-        }
-      }
-      ,
-      methods: ["GET", "POST", "OPTIONS"],
-      allowedHeaders: ["Content-Type"],
-      credentials: true
-    }));
+    // --- 📦 Serve Frontend static files ---
+    app.use(express.static(path.join(__dirname, "dist")));
+
+    // --- 🛡️ No CORS needed anymore ---
+    // Remove cors() middleware completely!
 
     app.use(express.json());
 
-    // --- ✨ Use startMcpServer manually on Express app ---
+    // --- ✨ Attach MCP server ---
     await startMcpServer(mcp_actions, agent, {
       name: "solana-agent",
       version: "0.0.1",
     });
 
-    // Attach the MCP server to the existing Express app
-    // Define a custom router for the Express app
-        const router = express.Router();
-        router.use("/agent", (req, res) => {
-          res.send("Agent-specific routes can be defined here.");
-        });
-        app.use(router);
-
-    app.get("/", (req, res) => {
-      res.send("✅ MCP Solana Server Running with CORS!");
+    // --- 🌐 Catch-all to serve frontend's index.html for React Router ---
+    app.get("*", (req, res) => {
+      res.sendFile(path.join(__dirname, "dist", "index.html"));
     });
 
     app.listen(PORT, () => {
-      console.log(`✅ Server listening on port ${PORT}`);
+      console.log(`✅ Server is running on port ${PORT}`);
     });
-
   } catch (error) {
     console.error(
       "Failed to start MCP server:",
-      error instanceof Error ? error.message : String(error),
+      error instanceof Error ? error.message : String(error)
     );
     process.exit(1);
   }
 }
 
-// Handle uncaught exceptions and rejections
 process.on("uncaughtException", (error) => {
   console.error("Uncaught Exception:", error);
   process.exit(1);
