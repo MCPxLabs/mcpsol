@@ -1,26 +1,23 @@
 #!/usr/bin/env node
-
 import { ACTIONS, SolanaAgentKit, startMcpServer } from "solana-agent-kit";
 import * as dotenv from "dotenv";
+import express from "express";
+import cors from "cors";
 
 dotenv.config();
 
 // Validate required environment variables
 function validateEnvironment() {
-  const requiredEnvVars = {
-    SOLANA_PRIVATE_KEY: process.env.SOLANA_PRIVATE_KEY,
-    RPC_URL: process.env.RPC_URL,
-  };
-
-  const missingVars = Object.entries(requiredEnvVars)
-    .filter(([_, value]) => !value)
-    .map(([key]) => key);
-
-  if (missingVars.length > 0) {
-    throw new Error(
-      `Missing required environment variables: ${missingVars.join(", ")}`
-    );
-  }
+    const requiredEnvVars = {
+        SOLANA_PRIVATE_KEY: process.env.SOLANA_PRIVATE_KEY,
+        RPC_URL: process.env.RPC_URL,
+    };
+    const missingVars = Object.entries(requiredEnvVars)
+        .filter(([_, value]) => !value)
+        .map(([key]) => key);
+    if (missingVars.length > 0) {
+        throw new Error(`Missing required environment variables: ${missingVars.join(", ")}`);
+    }
 }
 
 async function main() {
@@ -29,13 +26,9 @@ async function main() {
     validateEnvironment();
 
     // Initialize the agent with error handling
-    const agent = new SolanaAgentKit(
-      process.env.SOLANA_PRIVATE_KEY as string,
-      process.env.RPC_URL as string,
-      {
-        OPENAI_API_KEY: process.env.OPENAI_API_KEY || "",
-      }
-    );
+    const agent = new SolanaAgentKit(process.env.SOLANA_PRIVATE_KEY!, process.env.RPC_URL!, {
+      OPENAI_API_KEY: process.env.OPENAI_API_KEY || "",
+    });
 
     const mcp_actions = {
       GET_ASSET: ACTIONS.GET_ASSET_ACTION,
@@ -51,18 +44,17 @@ async function main() {
       RESOLVE_DOMAIN: ACTIONS.RESOLVE_SOL_DOMAIN_ACTION,
       GET_TPS: ACTIONS.GET_TPS_ACTION,
     };
-    // Start the MCP server with error handling
+
+    // Start the MCP server
     await startMcpServer(mcp_actions, agent, {
       name: "solana-agent",
       version: "0.0.1",
     });
   } catch (error) {
-    console.error(
-      "Failed to start MCP server:",
-      error instanceof Error ? error.message : String(error)
-    );
+    console.error("Failed to start MCP server:", error instanceof Error ? error.message : String(error));
     process.exit(1);
   }
 }
+
 
 main();
