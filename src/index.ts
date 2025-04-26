@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+import express from "express";
+import cors from "cors";
 import { ACTIONS, SolanaAgentKit, startMcpServer } from "solana-agent-kit";
 import * as dotenv from "dotenv";
 
@@ -28,7 +30,7 @@ async function main() {
     // Validate environment before proceeding
     validateEnvironment();
 
-    // Initialize the agent with error handling
+    // Initialize the agent
     const agent = new SolanaAgentKit(
       process.env.SOLANA_PRIVATE_KEY!,
       process.env.RPC_URL!,
@@ -52,11 +54,44 @@ async function main() {
       GET_TPS: ACTIONS.GET_TPS_ACTION,
     };
 
-    // Start the MCP server with error handling
+    const app = express();
+    const PORT = process.env.PORT || 8080;
+
+    // --- 🛡️ Configure CORS ---
+    app.use(cors({
+      origin: [
+        "https://mcpfront-production.up.railway.app",
+        "http://localhost:5173" // For local dev
+      ],
+      methods: ["GET", "POST", "OPTIONS"],
+      allowedHeaders: ["Content-Type"],
+      credentials: true
+    }));
+
+    app.use(express.json());
+
+    // --- ✨ Use startMcpServer manually on Express app ---
     await startMcpServer(mcp_actions, agent, {
       name: "solana-agent",
       version: "0.0.1",
     });
+
+    // Attach the MCP server to the existing Express app
+    // Define a custom router for the Express app
+        const router = express.Router();
+        router.use("/agent", (req, res) => {
+          res.send("Agent-specific routes can be defined here.");
+        });
+        app.use(router);
+
+    app.get("/", (req, res) => {
+      res.send("✅ MCP Solana Server Running with CORS!");
+    });
+
+    app.listen(PORT, () => {
+      console.log(`✅ Server listening on port ${PORT}`);
+    });
+
   } catch (error) {
     console.error(
       "Failed to start MCP server:",
