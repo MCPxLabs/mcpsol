@@ -59,10 +59,18 @@ async function main() {
 
     // --- 🛡️ Configure CORS ---
     app.use(cors({
-      origin: [
-        "https://mcpfront-production.up.railway.app",
-        "http://localhost:5173" // For local dev
-      ],
+      origin: (origin, callback) => {
+        const allowedOrigins = [
+          "https://mcpfront-production.up.railway.app",
+          "http://localhost:5173"
+        ];
+        if (!origin || allowedOrigins.includes(origin)) {
+          callback(null, true);
+        } else {
+          callback(new Error("Not allowed by CORS"));
+        }
+      }
+      ,
       methods: ["GET", "POST", "OPTIONS"],
       allowedHeaders: ["Content-Type"],
       credentials: true
