@@ -15,6 +15,11 @@ This MCP server extends Claude's capabilities by providing tools to:
 * Manage Solana wallets
 
 The server implements the Model Context Protocol specification to standardize blockchain interactions for AI agents.
+## Token Trading Demo
+
+
+https://github.com/user-attachments/assets/e44aa207-3097-48d9-8d3a-5012b431f2cd
+
 
 ## Prerequisites
 
